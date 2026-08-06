@@ -20,7 +20,7 @@
   // ---------------------------------------------------------------- config --
   const CONFIG = {
     // Console lines whose first argument matches any of these are captured.
-    consolePatterns: [/^\s*\[\s*(analytics|bigquery|ga4?|gtm|segment|mixpanel|amplitude)\b/i],
+    consolePatterns: [/^(?:%[a-zA-Z]\s*)*\[\s*(analytics|bigquery|ga4?|gtm|segment|mixpanel|amplitude)\b/i],
     // Network requests whose URL matches any of these are captured.
     networkPatterns: [/google-analytics\.com/i, /analytics\.google\.com/i, /\/g\/collect/i, /\/collect\?/i],
     maxEvents: 600,
@@ -199,8 +199,14 @@
       try {
         const head = typeof args[0] === 'string' ? args[0] : '';
         if (head && CONFIG.consolePatterns.some((r) => r.test(head))) {
-          const rest = args.slice(1);
-          addEvent('console', head.replace(/^\s*\[|\]\s*$/g, '').trim(),
+          const directives = head.match(/^(?:%[a-zA-Z]\s*)*/)[0];
+          const styleArgCount = (directives.match(/%c/g) || []).length;
+          const rest = args.slice(1 + styleArgCount);
+          const cleanName = head
+            .slice(directives.length)
+            .replace(/^\s*\[|\]\s*$/g, '')
+            .trim();
+          addEvent('console', cleanName,
             rest.length === 0 ? null : rest.length === 1 ? rest[0] : rest);
         }
       } catch (e) { /* never break the host console */ }
